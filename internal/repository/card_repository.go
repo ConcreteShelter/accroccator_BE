@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -135,71 +135,71 @@ func (r *CardRepository) GetAllCards(page int, pageSize int) ([]model.Card, erro
 	return result, nil
 }
 
-func (r *CardRepository) SetCardOwnedQuantity(id string, newQuantity int, containerId string) (*model.Card, error) {
-	// CERCHIAMO LA CARTA SCRYFALL
-	// 		SE NON C'È ERRORE
-	//		SE C'È CERCHIAMOLA IN OWNED
-	// 			SE C'È FACCIAMO UN UPDATE DELLA QUANTITY
-	// 			SE NON C'È LA AGGIUNGIAMO IN REPO SETTANDO IL NUMERO
+// func (r *CardRepository) SetCardOwnedQuantity(id string, newQuantity int, containerId string) (*model.Card, error) {
+// 	// CERCHIAMO LA CARTA SCRYFALL
+// 	// 		SE NON C'È ERRORE
+// 	//		SE C'È CERCHIAMOLA IN OWNED
+// 	// 			SE C'È FACCIAMO UN UPDATE DELLA QUANTITY
+// 	// 			SE NON C'È LA AGGIUNGIAMO IN REPO SETTANDO IL NUMERO
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// 	defer cancel()
 
-	// CERCHIAMO LA CARTA SCRYFALL
-	var scryfallCard model.ScryfallCard
-	err := r.scryfallCardsCollection.FindOne(ctx, bson.M{"id": id}).Decode(&scryfallCard)
+// 	// CERCHIAMO LA CARTA SCRYFALL
+// 	var scryfallCard model.ScryfallCard
+// 	err := r.scryfallCardsCollection.FindOne(ctx, bson.M{"id": id}).Decode(&scryfallCard)
 
-	if err != nil {
-		log.Printf("Error finding card with id '%s': %v", id, err)
-		return nil, err
-	}
+// 	if err != nil {
+// 		log.Printf("Error finding card with id '%s': %v", id, err)
+// 		return nil, err
+// 	}
 
-	//	SE C'È CERCHIAMOLA IN OWNED
+// 	//	SE C'È CERCHIAMOLA IN OWNED
 
-	if containerId != "" {
+// 	if containerId != "" {
 
-	}
+// 	}
 
-	var ownedCard model.Card
-	err = r.ownedCardsCollection.FindOne(ctx, bson.M{"id": id}).Decode(&ownedCard)
+// 	var ownedCard model.Card
+// 	err = r.ownedCardsCollection.FindOne(ctx, bson.M{"id": id}).Decode(&ownedCard)
 
-	filter := bson.M{"id": id}
-	update := bson.M{"$set": bson.M{"quantity": newQuantity}}
+// 	filter := bson.M{"id": id}
+// 	update := bson.M{"$set": bson.M{"quantity": newQuantity}}
 
-	if err == nil {
+// 	if err == nil {
 
-		if newQuantity == 0 {
-			err := r.RemoveOwnedCard(id)
-			return nil, err
-		}
-		_, err := r.ownedCardsCollection.UpdateOne(ctx, filter, update)
-		if err != nil {
-			return nil, err
-		}
+// 		if newQuantity == 0 {
+// 			err := r.RemoveOwnedCard(id)
+// 			return nil, err
+// 		}
+// 		_, err := r.ownedCardsCollection.UpdateOne(ctx, filter, update)
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		ownedCard.OwnerShip.ContainerQuantity = newQuantity
-		return &ownedCard, nil
-	} else if err == mongo.ErrNoDocuments {
-		newOwnedCard := model.Card{
-			ScryfallCard: scryfallCard,
-			OwnerShip: model.OwnerShip{
-				ContainerQuantity: newQuantity,
-			},
-		}
+// 		ownedCard.ContainedIn.ContainerQuantity = newQuantity
+// 		return &ownedCard, nil
+// 	} else if err == mongo.ErrNoDocuments {
+// 		newOwnedCard := model.Card{
+// 			ScryfallCard: scryfallCard,
+// 			ContainedIn: model.InventoryOwnership{
+// 				ContainerQuantity: newQuantity,
+// 			},
+// 		}
 
-		insertResult, err := r.ownedCardsCollection.InsertOne(ctx, newOwnedCard)
-		newID := insertResult.InsertedID.(primitive.ObjectID)
-		newOwnedCard.OwnerShip.ContainerID = &newID
-		if err != nil {
-			return nil, err
-		}
+// 		insertResult, err := r.ownedCardsCollection.InsertOne(ctx, newOwnedCard)
+// 		newID := insertResult.InsertedID.(primitive.ObjectID)
+// 		newOwnedCard.ContainedIn.ContainerID = &newID
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		return &newOwnedCard, nil
-	} else {
-		return nil, err
-	}
+// 		return &newOwnedCard, nil
+// 	} else {
+// 		return nil, err
+// 	}
 
-}
+// }
 
 func (r *CardRepository) AdvancedCardSearch(filters model.CardAdvancedSearchRequest) ([]model.Card, error) {
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)

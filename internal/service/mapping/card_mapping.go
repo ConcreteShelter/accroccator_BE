@@ -3,25 +3,25 @@ package card_mapping
 import "accroccator/internal/model"
 
 func MapOwned(scryfallCards []model.ScryfallCard, ownedCards []model.Card) []model.Card {
-	ownedMap := make(map[string][]model.Card)
-	for _, oc := range ownedCards {
-		ownedMap[oc.ID] = append(ownedMap[oc.ID], oc)
+	//let's build the blank map for later
+	ownedMap := make(map[string]model.Card)
+
+	for _, ownedCard := range ownedCards {
+		ownedMap[ownedCard.ID] = ownedCard
 	}
 
-	result := make([]model.Card, 0)
-	for _, sc := range scryfallCards {
-		entries, isOwned := ownedMap[sc.ID]
-		if isOwned {
-			for _, e := range entries {
-				result = append(result, model.Card{
-					ScryfallCard: sc,
-					OwnerShip:    e.OwnerShip,
-				})
-			}
+	mappedScryfallCards := make([]model.Card, 0)
+
+	for _, scryfallCard := range scryfallCards {
+		owned, ok := ownedMap[scryfallCard.ID]
+		if ok {
+			mappedScryfallCards = append(mappedScryfallCards, owned)
 		} else {
-			result = append(result, model.Card{ScryfallCard: sc})
+			mappedScryfallCards = append(mappedScryfallCards, model.Card{
+				ScryfallCard: scryfallCard,
+				ContainedIn:  []model.InventoryOwnership{},
+			})
 		}
 	}
 
-	return result
 }

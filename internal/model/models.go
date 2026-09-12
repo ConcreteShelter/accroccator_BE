@@ -17,10 +17,10 @@ type ScryfallCard struct {
 
 type Card struct {
 	ScryfallCard `bson:",inline"`
-	OwnerShip    OwnerShip `json:"ownership"`
+	ContainedIn  []InventoryOwnership `bson:"contained_in" json:"contained_in"`
 }
 
-type OwnerShip struct {
+type InventoryOwnership struct {
 	ContainerID       *primitive.ObjectID `bson:"container_id,omitempty" json:"container_id,omitempty"`
 	ContainerQuantity int                 `bson:"container_quantity" json:"container_quantity"`
 }
