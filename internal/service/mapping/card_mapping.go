@@ -24,4 +24,6 @@ func MapOwned(scryfallCards []model.ScryfallCard, ownedCards []model.Card) []mod
 		}
 	}
 
+	return mappedScryfallCards
+
 }

@@ -21,6 +21,6 @@ type Card struct {
 }
 
 type InventoryOwnership struct {
-	ContainerID       *primitive.ObjectID `bson:"container_id,omitempty" json:"container_id,omitempty"`
-	ContainerQuantity int                 `bson:"container_quantity" json:"container_quantity"`
+	ContainerID primitive.ObjectID `bson:"container_id" json:"container_id"`
+	Quantity    int                `bson:"quantity" json:"quantity"`
 }

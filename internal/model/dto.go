@@ -14,9 +14,9 @@ type PaginatedResponse[T any] struct {
 }
 
 // Handler
-type QuantityUpdate struct {
-	ContainerID       string `json:"container_id,omitempty"`
-	ContainerQuantity int    `json:"container_quantity"`
+type QuantityUpdateRequest struct {
+	ContainerID string `json:"container_id,omitempty"`
+	Quantity    int    `json:"quantity"`
 }
 
 type CreateContainerRequest struct {

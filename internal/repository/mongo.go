@@ -39,8 +39,8 @@ func StartMongoDb() (*mongo.Client, *CardRepository, *ContainerRepository) {
 	db := client.Database("accroccator_db")
 
 	// create the card repository with the db
-	cardRepo := NewCardRepository(db)
 	containerRepo := NewContainerRepository(db)
+	cardRepo := NewCardRepository(db, containerRepo)
 
 	return client, cardRepo, containerRepo
 }

@@ -30,7 +30,7 @@ func (h *Handler) CreateCardRoutes(router *gin.Engine) {
 	router.GET("/cards/all", h.findAllPaginated)
 	router.GET("/cards/search/:name", h.findByName) // Changed!
 	router.GET("/cards/:id", h.findByID)
-	// router.PATCH("/cards/:id/quantity", h.setOwnedQuantity)
+	router.POST("/cards/:id/update_ownership", h.setOwnedQuantity)
 	router.DELETE("/cards/:id", h.removeCard)
 }
 
@@ -82,26 +82,24 @@ func (h *Handler) removeCard(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, gin.H{"message": "Card successfully deleted"})
 }
 
-// func (h *Handler) setOwnedQuantity(c *gin.Context) {
-// 	cardId := c.Param("id")
+func (h *Handler) setOwnedQuantity(c *gin.Context) {
+	cardId := c.Param("id")
 
-// 	var update model.QuantityUpdate
-// 	if err := c.BindJSON(&update); err != nil {
-// 		c.JSON(400, gin.H{"error": "Invalid body"})
-// 		return
-// 	}
+	var containerQuantityUpdates []model.QuantityUpdateRequest
+	if err := c.BindJSON(&containerQuantityUpdates); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid body"})
+		return
+	}
 
-// 	containerId := update.ContainerID
-// 	newQuantity := update.ContainerQuantity
-// 	ownedCard, err := h.cardRepo.SetCardOwnedQuantity(cardId, newQuantity, containerId)
+	ownedCard, err := h.cardRepo.SetOwnedCard(cardId, containerQuantityUpdates)
 
-// 	if err != nil {
-// 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Card not found"})
-// 		return
-// 	}
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error updating card quantity"})
+		return
+	}
 
-// 	c.IndentedJSON(http.StatusOK, ownedCard)
-// }
+	c.IndentedJSON(http.StatusOK, ownedCard)
+}
 
 func (h *Handler) findByName(c *gin.Context) {
 	name := c.Param("name")

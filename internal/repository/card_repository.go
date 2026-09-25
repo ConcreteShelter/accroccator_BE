@@ -19,13 +19,15 @@ var ErrCardNotFound = errors.New("no cards with that id were found")
 type CardRepository struct {
 	ownedCardsCollection    *mongo.Collection
 	scryfallCardsCollection *mongo.Collection
+	containerRepo           *ContainerRepository
 }
 
 // Constructor
-func NewCardRepository(db *mongo.Database) *CardRepository {
+func NewCardRepository(db *mongo.Database, containerRepo *ContainerRepository) *CardRepository {
 	return &CardRepository{
 		ownedCardsCollection:    db.Collection("owned_cards"),
 		scryfallCardsCollection: db.Collection("scryfall_cards"),
+		containerRepo:           containerRepo,
 	}
 }
 
@@ -134,72 +136,6 @@ func (r *CardRepository) GetAllCards(page int, pageSize int) ([]model.Card, erro
 
 	return result, nil
 }
-
-// func (r *CardRepository) SetCardOwnedQuantity(id string, newQuantity int, containerId string) (*model.Card, error) {
-// 	// CERCHIAMO LA CARTA SCRYFALL
-// 	// 		SE NON C'È ERRORE
-// 	//		SE C'È CERCHIAMOLA IN OWNED
-// 	// 			SE C'È FACCIAMO UN UPDATE DELLA QUANTITY
-// 	// 			SE NON C'È LA AGGIUNGIAMO IN REPO SETTANDO IL NUMERO
-
-// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-// 	defer cancel()
-
-// 	// CERCHIAMO LA CARTA SCRYFALL
-// 	var scryfallCard model.ScryfallCard
-// 	err := r.scryfallCardsCollection.FindOne(ctx, bson.M{"id": id}).Decode(&scryfallCard)
-
-// 	if err != nil {
-// 		log.Printf("Error finding card with id '%s': %v", id, err)
-// 		return nil, err
-// 	}
-
-// 	//	SE C'È CERCHIAMOLA IN OWNED
-
-// 	if containerId != "" {
-
-// 	}
-
-// 	var ownedCard model.Card
-// 	err = r.ownedCardsCollection.FindOne(ctx, bson.M{"id": id}).Decode(&ownedCard)
-
-// 	filter := bson.M{"id": id}
-// 	update := bson.M{"$set": bson.M{"quantity": newQuantity}}
-
-// 	if err == nil {
-
-// 		if newQuantity == 0 {
-// 			err := r.RemoveOwnedCard(id)
-// 			return nil, err
-// 		}
-// 		_, err := r.ownedCardsCollection.UpdateOne(ctx, filter, update)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		ownedCard.ContainedIn.ContainerQuantity = newQuantity
-// 		return &ownedCard, nil
-// 	} else if err == mongo.ErrNoDocuments {
-// 		newOwnedCard := model.Card{
-// 			ScryfallCard: scryfallCard,
-// 			ContainedIn: model.InventoryOwnership{
-// 				ContainerQuantity: newQuantity,
-// 			},
-// 		}
-
-// 		insertResult, err := r.ownedCardsCollection.InsertOne(ctx, newOwnedCard)
-// 		newID := insertResult.InsertedID.(primitive.ObjectID)
-// 		newOwnedCard.ContainedIn.ContainerID = &newID
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		return &newOwnedCard, nil
-// 	} else {
-// 		return nil, err
-// 	}
-
-// }
 
 func (r *CardRepository) AdvancedCardSearch(filters model.CardAdvancedSearchRequest) ([]model.Card, error) {
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
