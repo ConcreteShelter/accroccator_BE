@@ -57,7 +57,7 @@ func (h *Handler) createContainer(c *gin.Context) {
 }
 
 func (h *Handler) findAllContainers(c *gin.Context) {
-	containers, err := h.containerRepo.GetAllContainers()
+	containers, err := h.containerRepo.GetAllContainers(model.PlaceholderShopID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving containers"})
 	}
@@ -67,7 +67,7 @@ func (h *Handler) findAllContainers(c *gin.Context) {
 
 func (h *Handler) removeCard(c *gin.Context) {
 	cardId := c.Param("id")
-	err := h.cardRepo.RemoveOwnedCard(cardId)
+	err := h.cardRepo.RemoveOwnedCard(cardId, model.PlaceholderShopID)
 
 	if err != nil {
 		if errors.Is(err, repository.ErrCardNotFound) {
@@ -91,7 +91,7 @@ func (h *Handler) setOwnedQuantity(c *gin.Context) {
 		return
 	}
 
-	ownedCard, err := h.cardRepo.SetOwnedCard(cardId, containerQuantityUpdates)
+	ownedCard, err := h.cardRepo.SetOwnedCard(cardId, containerQuantityUpdates, model.PlaceholderShopID)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error updating card quantity"})
@@ -109,7 +109,7 @@ func (h *Handler) findByName(c *gin.Context) {
 		return
 	}
 
-	cards, err := h.cardRepo.FindCardsByName(name)
+	cards, err := h.cardRepo.FindCardsByName(name, model.PlaceholderShopID)
 
 	if err != nil {
 		if errors.Is(err, repository.ErrCardNotFound) {
@@ -126,7 +126,7 @@ func (h *Handler) findByName(c *gin.Context) {
 
 func (h *Handler) findByID(c *gin.Context) {
 	id := c.Param("id")
-	card, err := h.cardRepo.FindCardByID(id)
+	card, err := h.cardRepo.FindCardByID(id, model.PlaceholderShopID)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Card not found"})
@@ -149,7 +149,7 @@ func (h *Handler) findAllPaginated(c *gin.Context) {
 
 	fmt.Printf("pageStr is %v and pageSizeStr is %v", pageStr, pageSizeStr)
 
-	cards, err := h.cardRepo.GetAllCards(page, pageSize)
+	cards, err := h.cardRepo.GetAllCards(page, pageSize, model.PlaceholderShopID)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving cards"})

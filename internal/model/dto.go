@@ -20,8 +20,9 @@ type QuantityUpdateRequest struct {
 }
 
 type CreateContainerRequest struct {
-	Name string `json:"name" binding:"required"`
-	Type string `json:"type" binding:"required"`
+	Name   string `json:"name" binding:"required"`
+	Type   string `json:"type" binding:"required"`
+	ShopID string `json:"shop_id" binding:"required"`
 }
 
 type CardAdvancedSearchRequest struct {

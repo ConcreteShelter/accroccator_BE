@@ -8,10 +8,13 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func (r *CardRepository) QueryOwned(ctx context.Context, scryfallCards []model.ScryfallCard) ([]model.Card, error) {
+func (r *CardRepository) QueryOwned(ctx context.Context,
+	scryfallCards []model.ScryfallCard,
+	shopId primitive.ObjectID) ([]model.OwnedCardReference, error) {
 	// GET ALL CARD IDS FROM THE PREVIOUS SLICE AND PUT THEM IN A SEPARATE SLICE
 	var cardIds []string = make([]string, 0, len(scryfallCards))
 	for _, card := range scryfallCards {
@@ -20,13 +23,14 @@ func (r *CardRepository) QueryOwned(ctx context.Context, scryfallCards []model.S
 
 	// BULK QUERY FOR ALL THE CARDS IN THE PREVIOUS SLICE TO CHECK IF THEY ARE IN THE OWNED COLLECTION
 	cursor, err := r.ownedCardsCollection.Find(ctx, bson.M{
-		"id": bson.M{"$in": cardIds},
+		"id":      bson.M{"$in": cardIds},
+		"shop_id": shopId,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	var ownedCards []model.Card
+	var ownedCards []model.OwnedCardReference
 	if err := cursor.All(ctx, &ownedCards); err != nil {
 		return nil, err
 	}
@@ -36,7 +40,8 @@ func (r *CardRepository) QueryOwned(ctx context.Context, scryfallCards []model.S
 
 func (r *CardRepository) SetOwnedCard(
 	scryfallId string,
-	containerInfos []model.QuantityUpdateRequest) (*model.Card, error) {
+	containerInfos []model.QuantityUpdateRequest,
+	shopID primitive.ObjectID) (*model.Card, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -52,7 +57,7 @@ func (r *CardRepository) SetOwnedCard(
 	//check if the containerInfos are correct
 	var quantityUpdates []model.InventoryOwnership = make([]model.InventoryOwnership, 0)
 	for _, info := range containerInfos {
-		foundContainer, err := r.containerRepo.FindContainerById(info.ContainerID)
+		foundContainer, err := r.containerRepo.FindContainerById(info.ContainerID, shopID)
 
 		if err != nil {
 			return nil, errors.New("Invalid container Id in list")
@@ -67,17 +72,24 @@ func (r *CardRepository) SetOwnedCard(
 
 	}
 
-	var ownedCard model.Card
-	err = r.ownedCardsCollection.FindOne(ctx, bson.M{"id": scryfallId}).Decode(&ownedCard)
+	var ownedCard model.OwnedCardReference
+	err = r.ownedCardsCollection.FindOne(ctx, bson.M{"id": scryfallId, "shop_id": shopID}).Decode(&ownedCard)
+
+	newOwnedCard := model.Card{
+		ScryfallCard: scryfallCard,
+		ContainedIn:  quantityUpdates,
+	}
+
+	ownedCardReference := model.OwnedCardReference{
+		ScryfallID:  scryfallId,
+		ContainedIn: quantityUpdates,
+		ShopID:      shopID,
+	}
 
 	switch err {
 	case mongo.ErrNoDocuments:
-		newOwnedCard := model.Card{
-			ScryfallCard: scryfallCard,
-			ContainedIn:  quantityUpdates,
-		}
 
-		_, err := r.ownedCardsCollection.InsertOne(ctx, newOwnedCard)
+		_, err := r.ownedCardsCollection.InsertOne(ctx, ownedCardReference)
 
 		if err != nil {
 			return nil, err
@@ -86,18 +98,13 @@ func (r *CardRepository) SetOwnedCard(
 		return &newOwnedCard, nil
 
 	case nil:
-		filter := bson.M{"id": scryfallId}
+		filter := bson.M{"id": scryfallId, "shop_id": shopID}
 		update := bson.M{"$set": bson.M{"contained_in": quantityUpdates}}
 
 		_, err = r.ownedCardsCollection.UpdateOne(ctx, filter, update)
 
 		if err != nil {
 			return nil, err
-		}
-
-		newOwnedCard := model.Card{
-			ScryfallCard: scryfallCard,
-			ContainedIn:  quantityUpdates,
 		}
 
 		return &newOwnedCard, nil
@@ -108,11 +115,11 @@ func (r *CardRepository) SetOwnedCard(
 
 }
 
-func (r *CardRepository) RemoveOwnedCard(id string) error {
+func (r *CardRepository) RemoveOwnedCard(id string, shopId primitive.ObjectID) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	filter := bson.M{"id": id}
+	filter := bson.M{"id": id, "shop_id": shopId}
 	result, err := r.ownedCardsCollection.DeleteOne(ctx, filter)
 
 	if err != nil {

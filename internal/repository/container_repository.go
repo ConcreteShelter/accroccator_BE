@@ -23,7 +23,7 @@ func NewContainerRepository(db *mongo.Database) *ContainerRepository {
 	}
 }
 
-func (r *ContainerRepository) FindContainerById(id string) (*model.Container, error) {
+func (r *ContainerRepository) FindContainerById(id string, shopId primitive.ObjectID) (*model.Container, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -33,7 +33,7 @@ func (r *ContainerRepository) FindContainerById(id string) (*model.Container, er
 	}
 
 	var container model.Container
-	err = r.containersCollection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&container)
+	err = r.containersCollection.FindOne(ctx, bson.M{"_id": objectID, "shop_id": shopId}).Decode(&container)
 
 	if err == mongo.ErrNoDocuments {
 		return nil, ErrContainerNotFound
@@ -47,11 +47,11 @@ func (r *ContainerRepository) FindContainerById(id string) (*model.Container, er
 
 }
 
-func (r *ContainerRepository) GetAllContainers() ([]model.Container, error) {
+func (r *ContainerRepository) GetAllContainers(shopId primitive.ObjectID) ([]model.Container, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cursor, err := r.containersCollection.Find(ctx, bson.M{})
+	cursor, err := r.containersCollection.Find(ctx, bson.M{"shop_id": shopId})
 	if err != nil {
 		return nil, err
 	}
@@ -70,9 +70,15 @@ func (r *ContainerRepository) CreateContainer(
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	shopId, err := primitive.ObjectIDFromHex(dto.ShopID)
+	if err != nil {
+		return nil, errors.New("invalid ID format")
+	}
+
 	container := model.Container{
-		Name: dto.Name,
-		Type: dto.Type,
+		Name:   dto.Name,
+		Type:   dto.Type,
+		ShopID: shopId,
 	}
 
 	result, err := r.containersCollection.InsertOne(ctx, container)

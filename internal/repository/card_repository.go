@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
 	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -32,7 +34,7 @@ func NewCardRepository(db *mongo.Database, containerRepo *ContainerRepository) *
 }
 
 // FIND BY ID
-func (r *CardRepository) FindCardByID(id string) ([]model.Card, error) {
+func (r *CardRepository) FindCardByID(id string, shopId primitive.ObjectID) ([]model.Card, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -53,7 +55,7 @@ func (r *CardRepository) FindCardByID(id string) ([]model.Card, error) {
 		return nil, ErrCardNotFound
 	}
 
-	ownedCards, err := r.QueryOwned(ctx, scryfallCards)
+	ownedCards, err := r.QueryOwned(ctx, scryfallCards, shopId)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +67,7 @@ func (r *CardRepository) FindCardByID(id string) ([]model.Card, error) {
 }
 
 // FIND BY NAME
-func (r *CardRepository) FindCardsByName(name string) ([]model.Card, error) {
+func (r *CardRepository) FindCardsByName(name string, shopId primitive.ObjectID) ([]model.Card, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -93,7 +95,7 @@ func (r *CardRepository) FindCardsByName(name string) ([]model.Card, error) {
 		return nil, ErrCardNotFound
 	}
 
-	ownedCards, err := r.QueryOwned(ctx, scryfallCards)
+	ownedCards, err := r.QueryOwned(ctx, scryfallCards, shopId)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +106,7 @@ func (r *CardRepository) FindCardsByName(name string) ([]model.Card, error) {
 
 }
 
-func (r *CardRepository) GetAllCards(page int, pageSize int) ([]model.Card, error) {
+func (r *CardRepository) GetAllCards(page int, pageSize int, shopId primitive.ObjectID) ([]model.Card, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -127,7 +129,7 @@ func (r *CardRepository) GetAllCards(page int, pageSize int) ([]model.Card, erro
 		return nil, err
 	}
 
-	ownedCards, err := r.QueryOwned(ctx, scryfallCards)
+	ownedCards, err := r.QueryOwned(ctx, scryfallCards, shopId)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +139,7 @@ func (r *CardRepository) GetAllCards(page int, pageSize int) ([]model.Card, erro
 	return result, nil
 }
 
-func (r *CardRepository) AdvancedCardSearch(filters model.CardAdvancedSearchRequest) ([]model.Card, error) {
+func (r *CardRepository) AdvancedCardSearch(filters model.CardAdvancedSearchRequest, shopId primitive.ObjectID) ([]model.Card, error) {
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
