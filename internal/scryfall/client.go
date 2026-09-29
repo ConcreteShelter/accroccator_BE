@@ -4,6 +4,7 @@ import (
 	"accroccator/internal/model"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -38,5 +39,32 @@ func CallScryfallBulkApi(url string) (*model.ScryfallBulkResponse, error) {
 	}
 
 	return &bulkResponse, nil
+
+}
+
+func StartDownload(url string) (io.ReadCloser, error) {
+
+	client := &http.Client{Timeout: 30 * time.Minute}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", "Accroccator/0.1")
+	req.Header.Set("Accept", "application/gzip")
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("unexpected status when downloading bulk %d", resp.StatusCode)
+	}
+
+	return resp.Body, nil
 
 }

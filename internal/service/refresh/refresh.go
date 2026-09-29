@@ -3,8 +3,13 @@ package refresh
 import (
 	"accroccator/internal/repository"
 	"accroccator/internal/scryfall"
+	"compress/gzip"
+	"encoding/json"
+	"io"
 	"log"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func needsToUpdate(dtoUpdate *time.Time, dbUpdate *time.Time) bool {
@@ -38,4 +43,41 @@ func PerformRefreshCheck(scryfallUrl string, bulkRepo *repository.BulkRepository
 
 	return nil
 
+}
+
+func ImportBulk(url string) error {
+	body, err := scryfall.StartDownload(url)
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+
+	gz, err := gzip.NewReader(body)
+	if err != nil {
+		return err
+	}
+	defer gz.Close()
+
+	dec := json.NewDecoder(gz)
+	count := 0
+	for {
+		var card bson.M
+		err := dec.Decode(&card)
+
+		if err == io.EOF {
+			//end of file
+			break
+		}
+
+		if err != nil {
+			return err
+		}
+
+		count++
+
+	}
+
+	log.Printf("the count of cards is %d", count)
+
+	return nil
 }
