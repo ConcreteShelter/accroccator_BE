@@ -136,7 +136,7 @@ func (r *BulkRepository) SwapStaging() error {
 
 	cmd := bson.D{
 		{Key: "renameCollection", Value: cardStagingName},
-		{Key: "to", Value: "accroccator_db.scryfall_cards"},
+		{Key: "to", Value: "accroccator_local_db.scryfall_cards"},
 		{Key: "dropTarget", Value: true},
 	}
 
