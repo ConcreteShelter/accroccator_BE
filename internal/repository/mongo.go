@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func StartMongoDb() (*mongo.Client, *CardRepository, *ContainerRepository) {
+func StartMongoDb() (*mongo.Client, *CardRepository, *ContainerRepository, *BulkRepository) {
 
 	uri := os.Getenv("MONGODB_URI")
 	if uri == "" {
@@ -36,13 +36,14 @@ func StartMongoDb() (*mongo.Client, *CardRepository, *ContainerRepository) {
 	fmt.Println("Successfully connected to MongoDB!")
 
 	// Get the database
-	db := client.Database("accroccator_db")
+	db := client.Database("accroccator_local_db")
 
 	// create the card repository with the db
+	bulkRepo := NewBulkRepository(db)
 	containerRepo := NewContainerRepository(db)
 	cardRepo := NewCardRepository(db, containerRepo)
 
-	return client, cardRepo, containerRepo
+	return client, cardRepo, containerRepo, bulkRepo
 }
 
 func newMongoClient(uri string) (*mongo.Client, error) {

@@ -7,6 +7,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type BulkRepository struct {
@@ -41,47 +42,15 @@ func (r *BulkRepository) UpdateLastBulk(bulkDto model.ScryfallBulkResponse) (*mo
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	lastBulkState, err := r.FindLastSavedBulk()
-
-	if err != nil {
-		return nil, err
-	}
-
-	if lastBulkState == nil {
-		lastBulkState, err = r.CreateFirstBulk(bulkDto)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return lastBulkState, nil
-	}
-
 	newBulk := model.BulkSyncState{
 		ID:        bulkDto.ID,
 		UpdatedAt: bulkDto.UpdatedAt,
 	}
+
 	update := bson.M{"$set": newBulk}
-	_, err = r.bulkCollection.UpdateOne(ctx, bson.M{}, update)
+	opts := options.Update().SetUpsert(true)
+	_, err := r.bulkCollection.UpdateOne(ctx, bson.M{}, update, opts)
 
-	if err != nil {
-		return nil, err
-	}
-
-	return &newBulk, nil
-
-}
-
-func (r *BulkRepository) CreateFirstBulk(bulkDto model.ScryfallBulkResponse) (*model.BulkSyncState, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	newBulk := model.BulkSyncState{
-		ID:        bulkDto.ID,
-		UpdatedAt: bulkDto.UpdatedAt,
-	}
-
-	_, err := r.bulkCollection.InsertOne(ctx, newBulk)
 	if err != nil {
 		return nil, err
 	}

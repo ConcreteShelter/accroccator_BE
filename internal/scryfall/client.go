@@ -11,8 +11,12 @@ import (
 func CallScryfallBulkApi(url string) (*model.ScryfallBulkResponse, error) {
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	// call the api
-	resp, err := client.Get(url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("User-Agent", "Accroccator/0.1")
+	req.Header.Set("Accept", "application/json")
+	resp, err := client.Do(req)
+
 	//if error is different than nil, we return early because in that case the resp would
 	//be a pointer to nil, which would make the program panic
 	if err != nil {

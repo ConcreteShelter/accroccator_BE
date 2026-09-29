@@ -3,6 +3,7 @@ package refresh
 import (
 	"accroccator/internal/repository"
 	"accroccator/internal/scryfall"
+	"log"
 	"time"
 )
 
@@ -24,6 +25,7 @@ func PerformRefreshCheck(scryfallUrl string, bulkRepo *repository.BulkRepository
 	}
 
 	if savedBulk != nil && !needsToUpdate(&response.UpdatedAt, &savedBulk.UpdatedAt) {
+		log.Println("bulk data already up to date, skipping")
 		return nil // already up to date: stop
 	}
 
