@@ -3,6 +3,7 @@ package repository
 import (
 	"accroccator/internal/model"
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -132,19 +133,31 @@ func (r *BulkRepository) SwapStaging() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	cardStagingName := r.scryfallCardsStaging.Database().Name()
+	adminDB := r.scryfallCardsStaging.Database().Client().Database("admin")
+	dbName := r.scryfallCardsStaging.Database().Name()
 
 	cmd := bson.D{
-		{Key: "renameCollection", Value: cardStagingName},
-		{Key: "to", Value: "accroccator_local_db.scryfall_cards"},
+		{Key: "renameCollection", Value: dbName + ".scryfall_cards_staging"},
+		{Key: "to", Value: dbName + ".scryfall_cards"},
 		{Key: "dropTarget", Value: true},
 	}
 
-	adminDB := r.scryfallCardsStaging.Database().Client().Database("admin")
 	err := adminDB.RunCommand(ctx, cmd).Err()
 
 	if err != nil {
-		return err
+		return fmt.Errorf("renaming cards: %w", err)
+	}
+
+	cmd = bson.D{
+		{Key: "renameCollection", Value: dbName + ".card_names_staging"},
+		{Key: "to", Value: dbName + ".card_names"},
+		{Key: "dropTarget", Value: true},
+	}
+
+	err = adminDB.RunCommand(ctx, cmd).Err()
+
+	if err != nil {
+		return fmt.Errorf("renaming names: %w", err)
 	}
 
 	return nil
