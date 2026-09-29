@@ -5,6 +5,7 @@ import (
 	"accroccator/internal/scryfall"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"time"
@@ -34,7 +35,15 @@ func PerformRefreshCheck(scryfallUrl string, bulkRepo *repository.BulkRepository
 		return nil // already up to date: stop
 	}
 
-	// import the bulk file — not built yet
+	err = importBulk(response.DownloadURI, bulkRepo)
+	if err != nil {
+		return fmt.Errorf("importing bulk: %w", err)
+	}
+
+	err = bulkRepo.CreateStagingIndexes()
+	if err != nil {
+		return fmt.Errorf("creating indexes: %w", err)
+	}
 
 	_, err = bulkRepo.UpdateLastBulk(*response)
 	if err != nil {
@@ -45,7 +54,14 @@ func PerformRefreshCheck(scryfallUrl string, bulkRepo *repository.BulkRepository
 
 }
 
-func ImportBulk(url string) error {
+func importBulk(url string, bulkrepo *repository.BulkRepository) error {
+
+	//drop the previous staging
+	err := bulkrepo.DropStaging()
+	if err != nil {
+		return err
+	}
+
 	body, err := scryfall.StartDownload(url)
 	if err != nil {
 		return err
@@ -60,6 +76,7 @@ func ImportBulk(url string) error {
 
 	dec := json.NewDecoder(gz)
 	count := 0
+	batchSlice := []any{}
 	for {
 		var card bson.M
 		err := dec.Decode(&card)
@@ -73,8 +90,26 @@ func ImportBulk(url string) error {
 			return err
 		}
 
+		batchSlice = append(batchSlice, card)
+		if len(batchSlice) == 10000 {
+			err = bulkrepo.InsertBatches(batchSlice)
+			if err != nil {
+				return err
+			}
+			log.Printf("inserted %d cards", count)
+
+			batchSlice = nil
+		}
+
 		count++
 
+	}
+
+	if len(batchSlice) > 0 {
+		err = bulkrepo.InsertBatches(batchSlice)
+		if err != nil {
+			return err
+		}
 	}
 
 	log.Printf("the count of cards is %d", count)

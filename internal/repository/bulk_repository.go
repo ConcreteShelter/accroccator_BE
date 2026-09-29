@@ -11,12 +11,14 @@ import (
 )
 
 type BulkRepository struct {
-	bulkCollection *mongo.Collection
+	bulkCollection       *mongo.Collection
+	scryfallCardsStaging *mongo.Collection
 }
 
 func NewBulkRepository(db *mongo.Database) *BulkRepository {
 	return &BulkRepository{
-		bulkCollection: db.Collection("bulk_last_update"),
+		bulkCollection:       db.Collection("bulk_last_update"),
+		scryfallCardsStaging: db.Collection("scryfall_cards_staging"),
 	}
 }
 
@@ -57,4 +59,93 @@ func (r *BulkRepository) UpdateLastBulk(bulkDto model.ScryfallBulkResponse) (*mo
 
 	return &newBulk, nil
 
+}
+
+func (r *BulkRepository) InsertBatches(batch []any) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	_, err := r.scryfallCardsStaging.InsertMany(ctx, batch)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *BulkRepository) DropStaging() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := r.scryfallCardsStaging.Drop(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func (r *BulkRepository) CreateStagingIndexes() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	_, err := r.scryfallCardsStaging.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "id", Value: 1}},   // field "id", ascending (the "1 (asc)" in Compass)
+			Options: options.Index().SetUnique(true), // the "unique" checkbox
+		},
+		{
+			Keys:    bson.D{{Key: "name", Value: 1}},
+			Options: options.Index(),
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *BulkRepository) BuildStagingNames() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$name"}}}},
+		{{Key: "$out", Value: "card_names_staging"}},
+	}
+
+	cursor, err := r.scryfallCardsStaging.Aggregate(ctx, pipeline)
+	if err != nil {
+		return err
+	}
+	defer cursor.Close(ctx)
+
+	return nil
+
+}
+
+func (r *BulkRepository) SwapStaging() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	cardStagingName := r.scryfallCardsStaging.Database().Name()
+
+	cmd := bson.D{
+		{Key: "renameCollection", Value: cardStagingName},
+		{Key: "to", Value: "accroccator_db.scryfall_cards"},
+		{Key: "dropTarget", Value: true},
+	}
+
+	adminDB := r.scryfallCardsStaging.Database().Client().Database("admin")
+	err := adminDB.RunCommand(ctx, cmd).Err()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
