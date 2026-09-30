@@ -45,6 +45,16 @@ func PerformRefreshCheck(scryfallUrl string, bulkRepo *repository.BulkRepository
 		return fmt.Errorf("creating indexes: %w", err)
 	}
 
+	err = bulkRepo.BuildStagingNames()
+	if err != nil {
+		return fmt.Errorf("building names: %w", err)
+	}
+
+	err = bulkRepo.SwapStaging()
+	if err != nil {
+		return fmt.Errorf("swapping staging: %w", err)
+	}
+
 	_, err = bulkRepo.UpdateLastBulk(*response)
 	if err != nil {
 		return err
