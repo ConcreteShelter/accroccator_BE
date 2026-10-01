@@ -7,6 +7,7 @@ import (
 	"accroccator/internal/service/refresh"
 	"context"
 	"log"
+	"time"
 )
 
 func main() {
@@ -26,10 +27,8 @@ func main() {
 	}()
 
 	bulkDataUrl := "https://api.scryfall.com/bulk-data/all-cards"
-	err = refresh.PerformRefreshCheck(bulkDataUrl, bulkRepo)
-	if err != nil {
-		log.Printf("Error refreshing bulk data %v", err)
-	}
+
+	go refresh.StartScheduler(bulkDataUrl, bulkRepo, 12*time.Hour)
 
 	handlers.StartEndpoints(cardRepo, containerRepo)
 }

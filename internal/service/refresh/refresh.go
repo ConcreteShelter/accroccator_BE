@@ -17,7 +17,24 @@ func needsToUpdate(dtoUpdate *time.Time, dbUpdate *time.Time) bool {
 	return dtoUpdate.After(*dbUpdate)
 }
 
-func PerformRefreshCheck(scryfallUrl string, bulkRepo *repository.BulkRepository) error {
+func StartScheduler(scryfallUrl string, bulkRepo *repository.BulkRepository, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	err := performRefreshCheck(scryfallUrl, bulkRepo)
+	if err != nil {
+		log.Printf("Error refreshing bulk data %v", err)
+	}
+
+	for range ticker.C {
+		err := performRefreshCheck(scryfallUrl, bulkRepo)
+		if err != nil {
+			log.Printf("refresh failed: %v", err)
+		}
+	}
+}
+
+func performRefreshCheck(scryfallUrl string, bulkRepo *repository.BulkRepository) error {
 	response, err := scryfall.CallScryfallBulkApi(scryfallUrl)
 
 	if err != nil {
