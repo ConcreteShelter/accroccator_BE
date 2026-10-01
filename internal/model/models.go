@@ -24,6 +24,7 @@ type ScryfallCard struct {
 	Name      string            `bson:"name" json:"name"`
 	TypeLine  string            `bson:"type_line" json:"type_line"`
 	ImageURIs map[string]string `bson:"image_uris" json:"image_uris"`
+	SetName   string            `bson:"set_name" json:"set_name"`
 }
 
 type Card struct {
