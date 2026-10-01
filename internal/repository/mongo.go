@@ -42,6 +42,10 @@ func StartMongoDb() (*mongo.Client, *CardRepository, *ContainerRepository, *Bulk
 	bulkRepo := NewBulkRepository(db)
 	containerRepo := NewContainerRepository(db)
 	cardRepo := NewCardRepository(db, containerRepo)
+	err = cardRepo.EnsureOwnedIndexes()
+	if err != nil {
+		log.Fatalf("Failed to create indexes on owned cards: %v", err)
+	}
 
 	return client, cardRepo, containerRepo, bulkRepo
 }

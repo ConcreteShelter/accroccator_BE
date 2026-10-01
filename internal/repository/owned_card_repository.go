@@ -10,7 +10,27 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func (r *CardRepository) EnsureOwnedIndexes() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	_, err := r.ownedCardsCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "shop_id", Value: 1},
+				{Key: "id", Value: 1},
+			},
+			Options: options.Index().SetUnique(true),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func (r *CardRepository) QueryOwned(ctx context.Context,
 	scryfallCards []model.ScryfallCard,

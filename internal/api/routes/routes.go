@@ -28,8 +28,9 @@ func NewHandler(
 
 func (h *Handler) CreateCardRoutes(router *gin.Engine) {
 	router.GET("/cards/all", h.findAllPaginated)
-	router.GET("/cards/search/:name", h.findByName) // Changed!
+	router.GET("/cards/search", h.findByName) // Changed!
 	router.GET("/cards/:id", h.findByID)
+	router.GET("/cards/names", h.searchCardNames)
 	router.POST("/cards/:id/update_ownership", h.setOwnedQuantity)
 	router.DELETE("/cards/:id", h.removeCard)
 }
@@ -102,12 +103,7 @@ func (h *Handler) setOwnedQuantity(c *gin.Context) {
 }
 
 func (h *Handler) findByName(c *gin.Context) {
-	name := c.Param("name")
-
-	if utf8.RuneCountInString(name) < 3 {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "The query needs more than 3 chars"})
-		return
-	}
+	name := c.Query("name")
 
 	cards, err := h.cardRepo.FindCardsByName(name, model.PlaceholderShopID)
 
@@ -157,4 +153,21 @@ func (h *Handler) findAllPaginated(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, cards)
+}
+
+func (h *Handler) searchCardNames(c *gin.Context) {
+	queryString := c.Query("q")
+
+	if utf8.RuneCountInString(queryString) < 3 {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "The query needs more than 3 chars"})
+		return
+	}
+
+	results, err := h.cardRepo.SearchCardNames(queryString)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving names"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, results)
 }

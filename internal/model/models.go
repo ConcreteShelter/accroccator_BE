@@ -41,3 +41,7 @@ type InventoryOwnership struct {
 	ContainerID primitive.ObjectID `bson:"container_id" json:"container_id"`
 	Quantity    int                `bson:"quantity" json:"quantity"`
 }
+
+type CardNameDoc struct {
+	NameID string `bson:"_id"`
+}

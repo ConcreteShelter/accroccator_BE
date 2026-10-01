@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"regexp"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,6 +23,7 @@ type CardRepository struct {
 	ownedCardsCollection    *mongo.Collection
 	scryfallCardsCollection *mongo.Collection
 	containerRepo           *ContainerRepository
+	cardNamesCollection     *mongo.Collection
 }
 
 // Constructor
@@ -30,6 +32,7 @@ func NewCardRepository(db *mongo.Database, containerRepo *ContainerRepository) *
 		ownedCardsCollection:    db.Collection("owned_cards"),
 		scryfallCardsCollection: db.Collection("scryfall_cards"),
 		containerRepo:           containerRepo,
+		cardNamesCollection:     db.Collection("card_names"),
 	}
 }
 
@@ -72,10 +75,7 @@ func (r *CardRepository) FindCardsByName(name string, shopId primitive.ObjectID)
 	defer cancel()
 
 	filter := bson.M{
-		"name": bson.M{
-			"$regex":   name,
-			"$options": "i",
-		},
+		"name": name,
 	}
 
 	cursor, err := r.scryfallCardsCollection.Find(ctx, filter)
@@ -139,20 +139,85 @@ func (r *CardRepository) GetAllCards(page int, pageSize int, shopId primitive.Ob
 	return result, nil
 }
 
-func (r *CardRepository) AdvancedCardSearch(filters model.CardAdvancedSearchRequest, shopId primitive.ObjectID) ([]model.Card, error) {
-	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func (r *CardRepository) SearchCardNames(queryString string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	filter := bson.M{
-		"name": bson.M{
-			"$regex":   filters.Name,
+		"_id": bson.M{
+			"$regex":   "^" + regexp.QuoteMeta(queryString),
 			"$options": "i",
 		},
 	}
 
-	if len(filters.Keywords) > 0 {
-		filter["keywords"] = bson.M{"$all": filters.Keywords}
+	opts := options.Find().SetLimit(20)
+
+	cursor, err := r.cardNamesCollection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var cardNameDocs []model.CardNameDoc
+	err = cursor.All(ctx, &cardNameDocs)
+	if err != nil {
+		return nil, err
 	}
 
-	return []model.Card{}, nil
+	stringResults := make([]string, 0, len(cardNameDocs))
+	for _, cardNameDoc := range cardNameDocs {
+		stringResults = append(stringResults, cardNameDoc.NameID)
+	}
+
+	if len(cardNameDocs) < 20 {
+		difToFill := 20 - len(cardNameDocs)
+
+		opts = options.Find().SetLimit(int64(difToFill))
+
+		filter = bson.M{
+			"_id": bson.M{
+				"$regex":   regexp.QuoteMeta(queryString),
+				"$options": "i",
+				"$nin":     stringResults,
+			},
+		}
+
+		cursor, err := r.cardNamesCollection.Find(ctx, filter, opts)
+		if err != nil {
+			return nil, err
+		}
+		defer cursor.Close(ctx)
+
+		var remainingCardNames []model.CardNameDoc
+
+		err = cursor.All(ctx, &remainingCardNames)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, cardNameDoc := range remainingCardNames {
+			stringResults = append(stringResults, cardNameDoc.NameID)
+		}
+	}
+
+	return stringResults, nil
+
 }
+
+// func (r *CardRepository) AdvancedCardSearch(filters model.CardAdvancedSearchRequest, shopId primitive.ObjectID) ([]model.Card, error) {
+// 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// 	defer cancel()
+
+// 	filter := bson.M{
+// 		"name": bson.M{
+// 			"$regex":   filters.Name,
+// 			"$options": "i",
+// 		},
+// 	}
+
+// 	if len(filters.Keywords) > 0 {
+// 		filter["keywords"] = bson.M{"$all": filters.Keywords}
+// 	}
+
+// 	return []model.Card{}, nil
+// }
