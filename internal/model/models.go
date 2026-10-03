@@ -20,11 +20,15 @@ type Container struct {
 }
 
 type ScryfallCard struct {
-	ID        string            `bson:"id" json:"id"`
-	Name      string            `bson:"name" json:"name"`
-	TypeLine  string            `bson:"type_line" json:"type_line"`
-	ImageURIs map[string]string `bson:"image_uris" json:"image_uris"`
-	SetName   string            `bson:"set_name" json:"set_name"`
+	ID              string            `bson:"id" json:"id"`
+	Name            string            `bson:"name" json:"name"`
+	TypeLine        string            `bson:"type_line" json:"type_line"`
+	ImageURIs       map[string]string `bson:"image_uris" json:"image_uris"`
+	Set             string            `bson:"set" json:"set"`
+	SetName         string            `bson:"set_name" json:"set_name"`
+	CollectorNumber string            `bson:"collector_number" json:"collector_number"`
+	Lang            string            `bson:"lang" json:"lang"`
+	ReleasedAt      string            `bson:"released_at" json:"released_at"`
 }
 
 type Card struct {
